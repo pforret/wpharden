@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-### ==============================================================================
-### SO HOW DO YOU PROCEED WITH YOUR SCRIPT?
-### 1. define the options/parameters and defaults you need in list_options()
-### 2. implement the different actions in main() with helper functions
-### 3. implement helper functions you defined in previous step
-### 4. add binaries your script needs (e.g. ffmpeg, jq) to verify_programs
-### ==============================================================================
-
 ### Created by Peter Forret ( pforret ) on 2020-10-12
 script_version="0.0.0"  # if there is a VERSION.md in this script's folder, it will take priority for version number
 readonly script_author="peter@forret.com"
@@ -14,17 +6,6 @@ readonly script_creation="2020-10-12"
 readonly run_as_root=-1 # run_as_root: 0 = don't check anything / 1 = script MUST run as root / -1 = script MAY NOT run as root
 
 list_options() {
-  ### Change the next lines to reflect which flags/options/parameters you need
-  ### flag:   switch a flag 'on' / no extra parameter
-  ###     flag|<short>|<long>|<description>
-  ###     e.g. "-v" or "--verbose" for verbose output / default is always 'off'
-  ### option: set an option value / 1 extra parameter
-  ###     option|<short>|<long>|<description>|<default>
-  ###     e.g. "-e <extension>" or "--extension <extension>" for a file extension
-  ### param:  comes after the options
-  ###     param|<type>|<long>|<description>
-  ###     <type> = 1 for single parameters - e.g. param|1|output expects 1 parameter <output>
-  ###     <type> = n for list parameter    - e.g. param|n|inputs expects <input1> <input2> ... <input99>
 echo -n "
 #commented lines will be filtered
 flag|h|help|show usage
@@ -33,10 +14,8 @@ flag|v|verbose|output more
 flag|f|force|do not ask for confirmation (always yes)
 option|l|log_dir|folder for log files |log
 option|t|tmp_dir|folder for temp files|.tmp
-param|1|action|action to perform: action1/action2/...
-# there can only be 1 param|n and it should be the last
-param|1|input|input file
-param|1|output|output file
+option|w|wp_root|root folder of Wordpress installation|.
+param|1|action|action to perform: htaccess/restrict/config
 " | grep -v '^#'
 }
 
@@ -54,17 +33,18 @@ main() {
 
     action=$(lower_case "$action")
     case $action in
-    action1 )
+    all|permission|permissions|restrict )
         # shellcheck disable=SC2154
-        perform_action1 "$input" "$output"
+        protect_files   "$wp_root" 
+        protect_folders "$wp_root"
         ;;
+    esac
 
-    action2 )
-        perform_action2 "$input" "$output"
+    case $action in
+    all|htaccess|access )
+        protect_files   "$wp_root" 
+        protect_folders "$wp_root"
         ;;
-
-    *)
-        die "action [$action] not recognized"
     esac
 }
 
@@ -72,14 +52,15 @@ main() {
 ## Put your helper scripts here
 #####################################################################
 
-perform_action1(){
-  echo "ACTION 1"
-  # < "$1"  do_stuff > "$2"
+restrict_files(){
+  [[ ! -d "$1" ]] && die "Folder [$1] could not be found"
+  out "Restrict file access for [$1]"
+  find "$1" -type f -exec chmod "${2:-644}" {} \;
 }
 
-perform_action2(){
-  echo "ACTION 2"
-  # < "$1"  do_other_stuff > "$2"
+restrict_folders(){
+  out "Restrict folder access for [$1]"
+  find "$1" -type d -exec chmod "${2:-755}" {} \;
 }
 
 
